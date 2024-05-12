@@ -71,7 +71,7 @@
 import express from 'express';
 import cors from 'cors';
 import { connectToMongoose } from './configurations/mongoose.config.js';
-import {calculateAllPointsController, createTeamController } from './controllers/user.controller.js';
+import {calculateAllPointsController, createTeamController, processFinalResultController } from './controllers/user.controller.js';
 const app = express();
 
 app.use(cors());
@@ -85,6 +85,10 @@ app.post("/add-team", (req, res) => {
 app.get("/process-result", (req, res) => {
     calculateAllPointsController(req, res);
 });
+
+app.get("/team-result", (req, res) => {
+    processFinalResultController(req, res);
+})
 
 
 app.listen(7000, () => {

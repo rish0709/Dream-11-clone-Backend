@@ -6,7 +6,8 @@ const User = new mongoose.Schema({
     players: {type:Array, required:true},
     captain: {type:String, required:true},
     vice_captain: {type:String, required:true},
-    final_points: Number
+    total_points: {type:Number, default: 0}, 
+    winner: {type: String, default: "False"}
 
 })
 

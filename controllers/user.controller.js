@@ -1,18 +1,51 @@
-import { storeTeamDataInDatabase } from "../repositories/user.repo.js";
-import { players } from "../data/players.js";
+import { storeTeamDataInDatabase, retrieveAllRecordsFromDatabase, retrieveAllDocumentsWithMaximumPoints } from "../repositories/user.repo.js";
+import { playersList } from "../data/players.js";
 import { match } from "../data/match.js";
 import { current } from "@reduxjs/toolkit";
+import mongoose from "mongoose";
+import { model } from "../models/user.model.js";
 
 export const createTeamController = async(req, res) => {
     const {teamName, players, captain, vice_captain} = req.body;
-    // console.log(imageData, "image data in controller");
+    //  checking for valid input data 
+    if (players.length > 11 || players.length < 11){
+        return res.send("team should have exact 11 players");
+
+    }
+    var rulesObject = {"RR":0, "CSK" : 0, "WICKETKEEPER" : 0, "BATTER" : 0, "ALL-ROUNDER" : 0, "BOWLER" : 0};
+    for (var i = 0; i < players.length; i++){
+        const foundPlayer = playersList.find(player => player.Player === players[i]);
+        if (foundPlayer) {
+            const team = foundPlayer.Team;
+            if (team == "Chennai Super Kings"){
+                rulesObject["CSK"] += 1;
+            }
+            else{
+                rulesObject["RR"] += 1;
+            }
+            rulesObject[foundPlayer.Role] += 1;
+
+        } else {
+            return res.send("Player not found.");
+        }
+
+    }
+
+    if (rulesObject["RR"] > 10 || rulesObject["CSK"] > 10){
+        return res.send("you cant pick more than 10 players from a single team");
+    }
+    if (rulesObject["WICKETKEEPER"] < 1 || rulesObject["WICKETKEEPER"] > 8 || rulesObject["BATTER"] < 1 || rulesObject["BATTER"] > 8 || rulesObject["BOWLER"] < 1 || rulesObject["BOWLER"] > 8 || rulesObject["ALL-ROUNDER"] < 1 || rulesObject["ALL-ROUNDER"] > 8 ){
+        return res.send("your total number of players are out of range, pick players from minimum 1 to maximum 8");
+    }
+
+
     const result = await storeTeamDataInDatabase(teamName, players, captain, vice_captain);
     if (result){
-        res.send("data stored successfully");
+        return res.send("data stored successfully");
 
     }
     else{
-        res.send("Error storing data");
+        return res.send("Error making team, try again");
     }
 
 
@@ -85,16 +118,15 @@ export const calculateAllPointsController = async(req, res) => {
             }
         }
 
+        var currentOverRuns = 0;
+
         if (currentMatch["bowler"] in totalPlayers){
 
         // assigning bowler points
             if (currentMatch["isWicketDelivery"] == 1 ){
-                console.log("inside bowler if");
+
 
                 // 1 wicket point
-                if (currentMatch["bowler"] == "R Ashwin"){
-                    console.log(totalPlayers[currentMatch["bowler"]], "ashwin figures before");
-                }
                 totalPlayers[currentMatch["bowler"]][0]["total_points"] += 25
                 totalPlayers[currentMatch["bowler"]][0]["wickets_taken"] += 1
 
@@ -104,9 +136,6 @@ export const calculateAllPointsController = async(req, res) => {
                 if (currentMatch["kind"] == "lbw" || currentMatch["kind"] == "bowled"){
                     totalPlayers[currentMatch["bowler"]][0]["total_points"] += 8
 
-                }
-                if (currentMatch["bowler"] == "R Ashwin"){
-                    console.log(totalPlayers[currentMatch["bowler"]], "ashwin figures after");
                 }
                 // 3 wicket bonus
                 if (totalPlayers[currentMatch["bowler"]][0]["wickets_taken"] == 3){
@@ -127,6 +156,15 @@ export const calculateAllPointsController = async(req, res) => {
 
                 }
             }
+
+
+            currentOverRuns += currentMatch["total_runs"]
+            // checking the maiden over
+            if (currentMatch["ballnumber"] == 6 && currentOverRuns == 0){
+                totalPlayers[currentMatch["bowler"]][0]["total_points"] += 12
+
+                
+            }
         
         
             
@@ -143,6 +181,7 @@ export const calculateAllPointsController = async(req, res) => {
                 totalPlayers[currentMatch["bowler"]][0]["total_points"] = 8 
 
             }
+            currentOverRuns += currentMatch["total_runs"]
         }
 
         // fielding points
@@ -186,9 +225,56 @@ export const calculateAllPointsController = async(req, res) => {
 
     }
 }
-    
-    res.status(200).send(totalPlayers);
 
+    // calculating and assigning total_points to each registered team
+    const allRecords = await retrieveAllRecordsFromDatabase();
+    console.log(allRecords, "all records");
+    for (var i = 0; i < allRecords.length; i++){
+        
+        const playersInASingleTeam = allRecords[i]["players"];
+        var totalPointsOfASingleTeam = 0;
+
+        for (var j = 0; j < playersInASingleTeam.length; j++){
+
+            if (playersInASingleTeam[j] in totalPlayers){
+                // totalPlayers[allRecords[i]["captain"]][0]["total_points"] *= 2
+                // totalPlayers[allRecords[i]["vice_captain"]][0]["total_points"] *= 1.5
+                if (playersInASingleTeam[j] == allRecords[i]["captain"]){
+                    console.log("in desired place");
+                    totalPlayers[allRecords[i]["captain"]][0]["total_points"] *= 2
+                }
+                if (playersInASingleTeam[j] == allRecords[i]["vice_captain"]){
+                    totalPlayers[allRecords[i]["vice_captain"]][0]["total_points"] *= 1.5
+
+                }
+
+                
+
+
+                totalPointsOfASingleTeam += totalPlayers[playersInASingleTeam[j]][0]["total_points"]
+                if (totalPointsOfASingleTeam == 188){
+                    console.log(totalPlayers, "totalPlayers points");
+                }
+                
+            }
+
+        }
+
+        const updatedDocument = await model.findOneAndUpdate({teamName: allRecords[i]["teamName"]}, {total_points: totalPointsOfASingleTeam});
+        
+
+
+    }
+    res.send("data");
+
+}
+
+
+export const processFinalResultController = async(req, res) => {
+    const allTeamsWithTheirStatus = await retrieveAllDocumentsWithMaximumPoints();
+    res.send(allTeamsWithTheirStatus);
+
+    
 }
 
 

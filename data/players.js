@@ -1,4 +1,9 @@
-export const players = [
+// team1 =["RD Gaikwad", "DP Conway", "M Pathirana","Ravindra Jadeja" , "Daryl Mitchell", "SO Hetmyer", "Rassie Van Der Dussen", "D Padikkal", "Karun Nair", "YBK Jaiswal", "MM Ali"]
+// team2 = ["RD Gaikwad", "Kuldip Yadav", "M Pathirana","Ravindra Jadeja" , "Rajvardhan Hangargekar", "SO Hetmyer", "Rassie Van Der Dussen", "D Padikkal", "Karun Nair", "YBK Jaiswal", "MM Ali"]
+
+// team 3 = ["RD Gaikwad", "Kuldip Yadav", "Dhruv Jurel","Ravindra Jadeja" , "Kuldeep Sen", "SO Hetmyer", "Rassie Van Der Dussen", "D Padikkal", "Karun Nair", "YBK Jaiswal", "MM Ali"]
+
+export const playersList = [
   {
     "Player": "RD Gaikwad",
     "Team": "Chennai Super Kings",
